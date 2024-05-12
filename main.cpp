@@ -202,7 +202,7 @@ vector<pair<vector<double>, int>> load_mnist_test()
     return test_data;
 }
 
-int main()
+int main() // Main function
 {
     // Neural network parameters
     vector<int> sizes = {784, 30, 10}; // 784 input neurons, 16 hidden neurons, 16 hidden neurons, 10 output neurons
