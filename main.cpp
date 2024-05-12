@@ -1,8 +1,14 @@
-#include <iostream> // Standard input/output
-#include <vector>   // Vectors
-#include <cmath>    // Math functions
-#include <cstdlib>  // Random number generation
-#include <ctime>    // Time functions
+#include <iostream>  // Standard input/output
+#include <vector>    // Vectors
+#include <cmath>     // Math functions
+#include <cstdlib>   // Random number generation
+#include <ctime>     // Time functions
+#include <fstream>   // File input/output
+#include <string>    // Strings
+#include <sstream>   // String streams
+#include <iterator>  // Iterators
+#include <algorithm> // Algorithms
+#include <random>    // Random number generation
 
 using namespace std;
 
@@ -137,3 +143,107 @@ public:
         return result_of_prediction;
     }
 };
+
+// Load MNIST dataset for training
+vector<pair<vector<double>, vector<double>>> load_mnist_train()
+{
+    vector<pair<vector<double>, vector<double>>> training_data;
+
+    ifstream file("mnist_train.csv");
+    string line;
+    // Skip the first line since it contains column headers
+    getline(file, line);
+    while (getline(file, line))
+    {
+        istringstream iss(line);
+        vector<string> tokens{istream_iterator<string>{iss}, istream_iterator<string>{}};
+
+        vector<double> input;
+        // Skip the first token which is the label
+        for (size_t i = 1; i < tokens.size(); i++)
+        {
+            input.push_back(stod(tokens[i]) / 255.0); // Normalize the input to be between 0 and 1
+        }
+
+        vector<double> label(10, 0.0); // 10 classes
+        label[stoi(tokens[0])] = 1.0;  // One-hot encoding
+
+        training_data.push_back({input, label});
+    }
+
+    return training_data;
+}
+
+// Load MNIST dataset for testing
+vector<pair<vector<double>, int>> load_mnist_test()
+{
+    vector<pair<vector<double>, int>> test_data;
+
+    ifstream file("mnist_test.csv");
+    string line;
+    // Skip the first line since it contains column headers
+    getline(file, line);
+    while (getline(file, line))
+    {
+        istringstream iss(line);
+        vector<string> tokens{istream_iterator<string>{iss}, istream_iterator<string>{}};
+
+        vector<double> input;
+        // Skip the first token which is the label
+        for (size_t i = 1; i < tokens.size(); i++)
+        {
+            input.push_back(stod(tokens[i]) / 255.0); // Normalize the input to be between 0 and 1
+        }
+
+        int label = stoi(tokens[0]); // Label is in the first column
+        test_data.push_back({input, label});
+    }
+
+    return test_data;
+}
+
+int main()
+{
+    // Neural network parameters
+    vector<int> sizes = {784, 30, 10}; // 784 input neurons, 16 hidden neurons, 16 hidden neurons, 10 output neurons
+    double learning_rate = 0.1;
+    int num_epochs = 30;
+    int seed = 42;
+
+    // Create the neural network
+    Network net(sizes, learning_rate);
+
+    // Load the MNIST dataset
+    vector<pair<vector<double>, vector<double>>> training_data = load_mnist_train();
+    vector<pair<vector<double>, int>> test_data = load_mnist_test();
+
+    // Train the neural network
+    for (int epoch = 0; epoch < num_epochs; ++epoch)
+    {
+        // Shuffle the training data
+        shuffle(training_data.begin(), training_data.end(), default_random_engine(seed));
+
+        // Train the network
+        for (const auto &data : training_data)
+        {
+            net.feed_forward(data.first);
+            net.backpropagation(data.second);
+        }
+
+        // Evaluate the performance of the network
+        int num_correct = 0;
+        for (const auto &data : test_data)
+        {
+            vector<double> prediction = net.predict(data.first);
+            int predicted_label = distance(prediction.begin(), max_element(prediction.begin(), prediction.end()));
+            if (predicted_label == data.second)
+            {
+                num_correct++;
+            }
+        }
+
+        cout << "Epoch " << epoch << ": " << num_correct << " / " << test_data.size() << " correct" << endl;
+    }
+
+    return 0;
+}
